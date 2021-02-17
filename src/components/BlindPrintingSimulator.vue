@@ -2,9 +2,12 @@
   <div class="mainText">
     <!-- <div class="first__message">Нажмите Enter чтобы начать</div> -->
     <h1>Тренажер слепой печати</h1>
-    <span v-for="(char, idx) of startInfo" :key="idx" :class="{ greenSymb: idx === counter, redSymb: idx === counterErr }">
+    <span v-for="(char, idx) of startInfo" :key="idx" :class="{ greenSymb: idx === counterSuccess, redSymb: idx === counterErr }">
       {{ char }}
     </span>
+    <div class="testTime">Время прохождения теста: {{ time }}</div>
+    <div class="speed">Скорость: {{ speed }} зн/мин</div>
+    <div class="accuracy">Точность: {{ accuracy }} %</div>
   </div>
 </template>
 
@@ -13,21 +16,47 @@ export default {
   data() {
     return {
       startInfo: "",
-      counter: 0,
+      counterSuccess: 0,
       counterErr: null,
+      badKeys: ["Shift", "CapsLock", "Tab", "Control", "Alt", "ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp"],
+      time: 0,
+      startFlag: false,
+      speed: null,
+      accuracy: 0,
+      counter: 0,
     };
   },
   methods: {
+    timeCounting() {
+      this.time++;
+    },
+    speedCounting() {
+      this.speed = Math.round((this.counterSuccess / this.time) * 60);
+    },
+    accuracyCounting() {
+      const acc = (this.counterSuccess * 100) / this.counter;
+      this.accuracy = acc.toFixed(1);
+    },
     onClickHandler(evt) {
-      const isContain = this.startInfo[this.counter].toLowerCase().includes(evt.key);
-      console.log(isContain);
-      if (isContain) {
+      const keyFlag = this.badKeys.includes(evt.key);
+      if (!keyFlag) {
         this.counter++;
-        if (this.counterErr) {
-          this.counterErr = null;
+        if (!this.startFlag) {
+          setInterval(this.timeCounting, 1000);
+          setInterval(this.speedCounting, 100);
+          setInterval(this.accuracyCounting, 100);
+          this.startFlag = !this.startFlag;
         }
-      } else {
-        this.counterErr = this.counter;
+        const isContain = this.startInfo[this.counterSuccess].includes(evt.key);
+        this.startFlag = true;
+        if (isContain) {
+          this.counterSuccess++;
+          if (this.counterErr) {
+            this.counterErr = null;
+          }
+        } else {
+          this.counterErr = this.counterSuccess;
+        }
       }
     },
   },
