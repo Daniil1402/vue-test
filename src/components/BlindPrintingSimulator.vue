@@ -7,12 +7,17 @@
     <div class="testTime">Время прохождения теста: {{ time }}</div>
     <div class="speed">Скорость: {{ speed }} зн/мин</div>
     <div class="accuracy">Точность: {{ accuracy }} %</div>
+    <div class="reload__image" v-on:click="reloadPage">
+      <img src="@/assets/redo-solid.svg" alt="Reload" />
+    </div>
     <div class="popup" v-if="isEnd">
       <h3 class="popup__title">Позравляю!!!</h3>
       <div class="testTime">Время прохождения теста: {{ time }}</div>
       <div class="speed">Скорость: {{ speed }} зн/мин</div>
       <div class="accuracy">Точность: {{ accuracy }} %</div>
-      <button v-on:click="reloadPage">Пройти заново</button>
+      <div>
+        <button v-on:click="reloadPage">Пройти заново</button>
+      </div>
     </div>
   </div>
 </template>
@@ -51,9 +56,8 @@ export default {
         const isContain = this.text[this.counterSuccess].includes(evt.key);
         if (isContain) {
           this.counterSuccess++;
-          if (this.counterErr) {
-            this.counterErr = null;
-          } else if (this.counterSuccess == this.text.length) {
+          this.counterErr = null;
+          if (this.counterSuccess == this.text.length) {
             this.stopUpdate();
           }
         } else {
@@ -86,7 +90,7 @@ export default {
     try {
       let response = await fetch("https://baconipsum.com/api/?type=all-meat&sentences=1&start-with-lorem=1");
       response = await response.json();
-      //response = ["aaa aaaaa aaaa aa"];
+      //response = ["aaa"];
       this.text = response[0].split("");
     } catch (error) {
       console.error(error.message);
@@ -103,7 +107,6 @@ export default {
 <style scoped>
 .mainText {
   width: 100%;
-  height: 225px;
   overflow: hidden;
   font-size: 21px;
   line-height: 32px;
@@ -146,6 +149,19 @@ span::after {
 
 .passed {
   color: rgb(55, 194, 62);
+}
+
+.reload__image {
+  width: 35px;
+  height: 35px;
+  margin: 20px auto 0;
+  cursor: pointer;
+}
+
+.reload__image img {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .popup {
