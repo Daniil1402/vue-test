@@ -1,5 +1,5 @@
 <template>
-  <div id="app" v-cloak>
+  <div id="app">
     <Simulator />
   </div>
 </template>
@@ -15,22 +15,43 @@ export default {
 </script>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+a:active,
+a:focus,
+button:active,
+button:focus,
+form:active,
+form:focus,
+textarea:active,
+textarea:focus {
+  box-shadow: none;
+  outline: none;
 }
-.first__message {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  max-width: 400px;
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+#app {
+  margin: 0;
+  padding: 0;
+
   width: 100%;
-  background: rgba(37, 37, 37, 0.4);
-  padding: 30px 0;
+  height: 100%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #000000;
+
+  font-family: Verdana, Geneva, Tahoma, sans-serif;
+  color: rgba(247, 244, 236, 1);
 }
 </style>

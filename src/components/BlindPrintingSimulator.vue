@@ -1,197 +1,248 @@
 <template>
-  <div class="mainText">
-    <h1>Тренажер слепой печати</h1>
-    <span v-for="(char, idx) of text" :key="idx" :class="{ greenSymb: idx === counterSuccess, redSymb: idx === counterErr, passed: idx <= counterSuccess - 1 }">
-      {{ char }}
-    </span>
-    <div class="testTime">Время прохождения теста: {{ time }}</div>
-    <div class="speed">Скорость: {{ speed }} зн/мин</div>
-    <div class="accuracy">Точность: {{ accuracy }} %</div>
-    <div class="reload__image" v-on:click="reloadPage">
-      <img src="@/assets/redo-solid.svg" alt="Reload" />
+  <div class="container">
+    <div class="text">
+      <span
+        v-for="(char, idx) of text"
+        :key="idx"
+        class="char"
+        :class="{
+          error: idx == error,
+          passed: idx < counterSuccess,
+        }"
+        >{{ char }}</span
+      >
     </div>
-    <div class="popup" v-if="isEnd">
-      <h3 class="popup__title">Позравляю!!!</h3>
-      <div class="testTime">Время прохождения теста: {{ time }}</div>
-      <div class="speed">Скорость: {{ speed }} зн/мин</div>
-      <div class="accuracy">Точность: {{ accuracy }} %</div>
-      <div>
-        <button v-on:click="reloadPage">Пройти заново</button>
-      </div>
-    </div>
+    <p>Время: {{ time }}</p>
+    <p>Текущая скорость: {{ speed }} зн/мин</p>
+    <p>Точность: {{ accuracy }} %</p>
+    <button @click="resetTraining">Пройти заново</button>
+    <!-- <p v-if="counterSuccess == text.length" class="congratulations">Поздравляю!</p> -->
   </div>
 </template>
 
 <script>
+const CONTROL_KEYS = ["Shift", "CapsLock", "Tab", "Control", "Alt", "ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp"];
+
+const initialState = () => ({
+  text: "",
+
+  counter: 0,
+  counterSuccess: 0,
+  error: null,
+
+  time: 0,
+  speed: 0,
+  accuracy: 0,
+
+  isStart: false,
+});
+
 export default {
   data() {
-    return {
-      text: "",
-      counterSuccess: 0,
-      counterErr: null,
-      time: 0,
-      isStart: false,
-      isEnd: false,
-      speed: 0,
-      accuracy: 0,
-      counter: 0,
-    };
+    return initialState();
   },
   methods: {
+    /**
+     * Fetch new training text from API.
+     *
+     */
+    async getNewText() {
+      try {
+        let response = await fetch("https://baconipsum.com/api/?type=all-meat&sentences=1&start-with-lorem=1");
+        response = await response.json();
+        //response = ["aaa"];
+        return response;
+      } catch (error) {
+        console.error(error.message);
+      }
+    },
+
+    /**
+     * Update current text.
+     */
+    async updateCurrentText(text) {
+      this.text = text;
+    },
+
+    /**
+     * Create timer and update time.
+     */
     updateTime() {
       this.time++;
     },
+
+    /**
+     * Speed calculation.
+     */
     updateSpeed(counterSuccess, time) {
       if (!counterSuccess || !time) return;
       this.speed = Math.round((counterSuccess / time) * 60);
     },
-    updateAccuracy() {
-      const acc = (this.counterSuccess * 100) / this.counter;
+
+    /**
+     * Accuracy calculation.
+     */
+    updateAccuracy(counterSuccess, counter) {
+      if (!counterSuccess || !counter) return;
+      const acc = (counterSuccess * 100) / counter;
       this.accuracy = acc.toFixed(1);
     },
-    onClickHandler(evt) {
-      const keyFlag = this.controlKeys.includes(evt.key);
-      if (!keyFlag) {
-        this.counter++;
-        const isContain = this.text[this.counterSuccess].includes(evt.key);
-        if (isContain) {
-          this.counterSuccess++;
-          this.counterErr = null;
-          if (this.counterSuccess == this.text.length) {
-            this.stopUpdate();
-          }
-        } else {
-          this.counterErr = this.counterSuccess;
-        }
-        if (!this.isStart) {
-          this.startUpdate();
-        }
-      }
-    },
-    startUpdate() {
+
+    /**
+     * Setup all our intervals.
+     */
+    startIntervalUpdate() {
       this.timeInterval = setInterval(() => this.updateTime(), 1000);
       this.speedInterval = setInterval(() => this.updateSpeed(this.counterSuccess, this.time), 100);
-      this.accuracyInterval = setInterval(() => this.updateAccuracy(), 100);
-      this.isStart = !this.isStart;
+      this.accuracyInterval = setInterval(() => this.updateAccuracy(this.counterSuccess, this.counter), 100);
+      // this.isStart = !this.isStart;
     },
-    stopUpdate() {
-      clearInterval(this.timeInterval);
-      clearInterval(this.speedInterval);
-      clearInterval(this.accuracyInterval);
-      document.removeEventListener("keydown", this.onClickHandler);
-      // console.log("THE END");
-      this.isEnd = true;
+
+    /**
+     * Clear intervals.
+     */
+    clearIntervals() {
+      if (this.timeInterval) {
+        clearInterval(this.timeInterval);
+      }
+
+      if (this.speedInterval) {
+        clearInterval(this.speedInterval);
+      }
+
+      if (this.accuracyInterval) {
+        clearInterval(this.accuracyInterval);
+      }
     },
-    reloadPage() {
-      window.location.reload();
+
+    /**
+     * Apply initial state.
+     */
+    resetState() {
+      Object.assign(this.$data, initialState());
+    },
+
+    /**
+     * Reset all.
+     */
+    async resetTraining() {
+      this.resetState();
+
+      let text = await this.getNewText();
+      if (!text) return;
+
+      let splittedText = text[0].split("");
+      await this.updateCurrentText(splittedText);
+    },
+
+    /**
+     * Init
+     */
+    async init() {
+      let text = await this.getNewText();
+      if (!text) return;
+
+      let splittedText = text[0].split("");
+
+      await this.updateCurrentText(splittedText);
+
+      document.addEventListener("keydown", this.onKeydown);
+    },
+
+    /**
+     * LISTENERS function.
+     */
+    onKeydown(event) {
+      if (CONTROL_KEYS.includes(event.key)) return;
+
+      // If our key.
+      this.counter += 1;
+      if (this.text[this.counterSuccess] && this.text[this.counterSuccess].includes(event.key)) {
+        if (!this.isStart) {
+          this.startIntervalUpdate();
+          this.isStart = !this.isStart;
+        }
+        this.counterSuccess += 1;
+        this.error = null;
+      } else {
+        this.error = this.counterSuccess;
+      }
+    },
+  },
+  watch: {
+    counter(to) {
+      if (to === this.text.length) {
+        this.clearIntervals();
+      }
     },
   },
   async mounted() {
-    try {
-      let response = await fetch("https://baconipsum.com/api/?type=all-meat&sentences=1&start-with-lorem=1");
-      response = await response.json();
-      //response = ["aaa"];
-      this.text = response[0].split("");
-    } catch (error) {
-      console.error(error.message);
-    }
-
-    document.addEventListener("keydown", this.onClickHandler);
+    this.init();
   },
-  created() {
-    this.controlKeys = ["Shift", "CapsLock", "Tab", "Control", "Alt", "ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp"];
+  destroyed() {
+    document.removeEventListener("keydown", this.onKeydown);
+    this.clearIntervals();
   },
 };
 </script>
 
 <style scoped>
-.mainText {
+.container {
+  max-width: 70vw;
   width: 100%;
-  overflow: hidden;
-  font-size: 21px;
-  line-height: 32px;
-}
+  margin: 0 auto;
 
-span {
-  min-width: 7px;
+  font-size: 20px;
   line-height: 1.5;
-  display: inline-flex;
-  position: relative;
+  letter-spacing: 0.1em;
+
+  transition: all 0.4s ease-out;
 }
 
-span::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  width: 100%;
-  height: 100%;
-  top: 0;
-  left: 0;
-  border-radius: 3px;
+.text {
+  padding-bottom: 40px;
+  min-height: 80px;
 }
 
-.greenSymb::after {
-  background: rgba(19, 221, 19, 0.781);
+p {
+  font-size: 14px;
+  line-height: 18px;
+  padding-bottom: 10px;
 }
 
-.redSymb::after {
-  background: red;
-}
-
-.greenSymb,
-.redSymb {
-  padding: 0 3px;
-  color: #fff;
-  min-width: 7px;
-  min-height: 10px;
-  color: white;
+p:last-of-type {
+  padding-bottom: 20px;
 }
 
 .passed {
-  color: rgb(55, 194, 62);
+  background-color: green;
 }
 
-.reload__image {
-  width: 35px;
-  height: 35px;
-  margin: 20px auto 0;
+.error {
+  background-color: red;
+}
+
+button {
   cursor: pointer;
+  border: none;
+  height: 35px;
+  padding: 0 20px;
+  border-radius: 4px;
+  background-color: rgba(247, 244, 236, 1);
+  transition: 0.3s;
 }
 
-.reload__image img {
-  width: 100%;
-  height: 100%;
-  display: block;
+button:hover {
+  box-shadow: 4px 4px 35px 20px rgba(255, 255, 255, 0.2);
+  transition: 0.3s;
 }
 
-.popup {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 10;
-  background: rgba(0, 0, 0, 0.7);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
-}
-
-.popup > div {
+/* .congratulations {
+  font-size: 20px;
+  text-transform: uppercase;
+  color: red;
   padding: 10px;
-  background: #fff;
-  color: #000;
-  max-width: 400px;
-  width: 100%;
-}
-
-.popup h3 {
-  padding: 10px;
-  background: #fff;
-  max-width: 400px;
-  width: 100%;
-  margin: 0;
-}
+  margin-top: 20px;
+  text-align: center;
+} */
 </style>
